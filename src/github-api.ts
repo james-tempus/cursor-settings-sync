@@ -16,6 +16,10 @@ export interface GitHubConfig {
   gistDescription: string;
 }
 
+// OAuth configuration - using GitHub Device Flow
+const OAUTH_CLIENT_ID = 'Ov23liJ8Z8X9Q2K3m4N7'; // GitHub OAuth App ID
+const OAUTH_SCOPE = 'gist';
+
 export class GitHubAPI {
   private client: AxiosInstance;
   private config: GitHubConfig | null = null;
@@ -32,45 +36,122 @@ export class GitHubAPI {
 
   async authenticate(): Promise<boolean> {
     try {
-      // Prompt for GitHub token
-      const token = await vscode.window.showInputBox({
-        prompt: 'Enter your GitHub Personal Access Token',
-        placeHolder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
-        password: true,
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-          if (!value || !value.startsWith('ghp_')) {
-            return 'Please enter a valid GitHub Personal Access Token (starts with ghp_)';
-          }
-          return null;
+      // Use GitHub Device Flow for OAuth
+      const deviceResponse = await axios.post('https://github.com/login/device/code', {
+        client_id: OAUTH_CLIENT_ID,
+        scope: OAUTH_SCOPE
+      }, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
 
-      if (!token) {
-        return false;
-      }
-
-      // Test the token
-      this.client.defaults.headers.common['Authorization'] = `token ${token}`;
-      const response = await this.client.get('/user');
+      const { device_code, user_code, verification_uri, interval } = deviceResponse.data;
       
-      if (response.status === 200) {
-        this.config = { token, gistId: '', gistDescription: '' };
-        await this.saveConfig();
-        
-        vscode.window.showInformationMessage(
-          `Successfully authenticated as ${response.data.login}`
+      // Show progress message with device code
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: "GitHub Authentication",
+        cancellable: true
+      }, async (progress, token) => {
+        // Show the device code to user
+        const openBrowser = await vscode.window.showInformationMessage(
+          `GitHub Authentication Required\n\n1. Go to: ${verification_uri}\n2. Enter code: ${user_code}\n3. Click "Authorize"`,
+          'Open Browser',
+          'Cancel'
         );
-        return true;
-      }
+
+        if (openBrowser === 'Open Browser') {
+          await vscode.env.openExternal(vscode.Uri.parse(verification_uri));
+        } else {
+          return false;
+        }
+
+        // Poll for access token
+        progress.report({ message: "Waiting for authorization..." });
+        
+        const accessToken = await this.pollForAccessToken(device_code, interval, token);
+        
+        if (accessToken) {
+          progress.report({ message: "Verifying access token..." });
+          
+          // Test the token
+          this.client.defaults.headers.common['Authorization'] = `token ${accessToken}`;
+          const response = await this.client.get('/user');
+          
+          if (response.status === 200) {
+            this.config = { token: accessToken, gistId: '', gistDescription: '' };
+            await this.saveConfig();
+            
+            vscode.window.showInformationMessage(
+              `Successfully authenticated as ${response.data.login}`
+            );
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      return true;
     } catch (error) {
       vscode.window.showErrorMessage(
-        'Failed to authenticate with GitHub. Please check your token.'
+        'Failed to authenticate with GitHub. Please try again.'
       );
       return false;
     }
-    
-    return false;
+  }
+
+  private async pollForAccessToken(deviceCode: string, interval: number, cancellationToken: vscode.CancellationToken): Promise<string | null> {
+    const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
+    let attempts = 0;
+
+    while (attempts < maxAttempts && !cancellationToken.isCancellationRequested) {
+      try {
+        const response = await axios.post('https://github.com/login/oauth/access_token', {
+          client_id: OAUTH_CLIENT_ID,
+          device_code: deviceCode,
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+        }, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.data.access_token) {
+          return response.data.access_token;
+        }
+
+        if (response.data.error === 'authorization_pending') {
+          // Wait for the specified interval before trying again
+          await new Promise(resolve => setTimeout(resolve, interval * 1000));
+          attempts++;
+        } else if (response.data.error === 'expired_token') {
+          vscode.window.showErrorMessage('Authentication code expired. Please try again.');
+          return null;
+        } else if (response.data.error === 'access_denied') {
+          vscode.window.showErrorMessage('Authentication was denied. Please try again.');
+          return null;
+        } else {
+          vscode.window.showErrorMessage(`Authentication error: ${response.data.error_description || response.data.error}`);
+          return null;
+        }
+      } catch (error) {
+        console.error('Error polling for access token:', error);
+        await new Promise(resolve => setTimeout(resolve, interval * 1000));
+        attempts++;
+      }
+    }
+
+    if (cancellationToken.isCancellationRequested) {
+      vscode.window.showInformationMessage('Authentication cancelled.');
+    } else {
+      vscode.window.showErrorMessage('Authentication timed out. Please try again.');
+    }
+
+    return null;
   }
 
   async selectOrCreateGist(): Promise<boolean> {
@@ -83,15 +164,17 @@ export class GitHubAPI {
       const response = await this.client.get('/gists');
       const gists: GitHubGist[] = response.data;
 
-      // Filter for Cursor Settings Sync gists
-      const cursorGists = gists.filter(gist => 
+      // Filter for Git Sync gists
+      const gitSyncGists = gists.filter(gist => 
+        gist.description.includes('Git Sync') || 
+        gist.description.includes('git-sync') ||
         gist.description.includes('Cursor Settings Sync') || 
         gist.description.includes('cursor-settings')
       );
 
-      if (cursorGists.length > 0) {
+      if (gitSyncGists.length > 0) {
         // Show existing gists
-        const gistItems = cursorGists.map(gist => ({
+        const gistItems = gitSyncGists.map(gist => ({
           label: gist.description || `Gist ${gist.id}`,
           description: `Updated: ${new Date(gist.updated_at).toLocaleDateString()}`,
           gist: gist
@@ -100,7 +183,7 @@ export class GitHubAPI {
         const selectedGist = await vscode.window.showQuickPick(
           [
             ...gistItems,
-            { label: '$(add) Create New Gist', description: 'Create a new gist for Cursor settings', gist: null }
+            { label: '$(add) Create New Gist', description: 'Create a new gist for Git Sync settings', gist: null }
           ],
           {
             placeHolder: 'Select an existing gist or create a new one',
@@ -138,9 +221,9 @@ export class GitHubAPI {
   private async createNewGist(): Promise<boolean> {
     try {
       const description = await vscode.window.showInputBox({
-        prompt: 'Enter a description for your Cursor Settings Gist',
-        placeHolder: 'Cursor Settings Sync - My Settings',
-        value: 'Cursor Settings Sync - My Settings',
+        prompt: 'Enter a description for your Git Sync Settings Gist',
+        placeHolder: 'Git Sync - My Settings',
+        value: 'Git Sync - My Settings',
         ignoreFocusOut: true
       });
 
@@ -152,7 +235,7 @@ export class GitHubAPI {
         description: description,
         public: false,
         files: {
-          'cursor-settings.json': {
+          'git-sync-settings.json': {
             content: JSON.stringify({
               settings: {},
               keybindings: [],
@@ -189,7 +272,7 @@ export class GitHubAPI {
       const gistData = {
         description: this.config.gistDescription,
         files: {
-          'cursor-settings.json': {
+          'git-sync-settings.json': {
             content: JSON.stringify({
               ...settings,
               lastUpdated: new Date().toISOString()
@@ -221,7 +304,7 @@ export class GitHubAPI {
       
       if (response.status === 200) {
         const gist: GitHubGist = response.data;
-        const settingsFile = gist.files['cursor-settings.json'];
+        const settingsFile = gist.files['git-sync-settings.json'];
         
         if (settingsFile) {
           const settings = JSON.parse(settingsFile.content);
