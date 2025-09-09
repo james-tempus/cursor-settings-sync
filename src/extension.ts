@@ -21,11 +21,11 @@ export function activate(context: vscode.ExtensionContext) {
   githubAPI.loadConfig().then(isConfigured => {
     if (!isConfigured) {
       vscode.window.showInformationMessage(
-        'Cursor Settings Sync: GitHub not configured. Run "Cursor: Setup GitHub Sync" to get started.',
+        'Git Sync: GitHub not configured. Run "Git Sync: Setup GitHub Sync" to get started.',
         'Setup Now'
       ).then(selection => {
         if (selection === 'Setup Now') {
-          vscode.commands.executeCommand('cursor.setupGitHubSync');
+          vscode.commands.executeCommand('gitSync.setupGitHubSync');
         }
       });
     }
@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Original ignore/focus commands
   let ignoreDisposable = vscode.commands.registerCommand(
-    "cursor.wrapWithIgnore",
+    "gitSync.wrapWithIgnore",
     () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   let focusDisposable = vscode.commands.registerCommand(
-    "cursor.wrapWithFocus",
+    "gitSync.wrapWithFocus",
     () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
@@ -70,7 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // GitHub setup command
   let setupDisposable = vscode.commands.registerCommand(
-    "cursor.setupGitHubSync",
+    "gitSync.setupGitHubSync",
     async () => {
       try {
         const authenticated = await githubAPI.authenticate();
@@ -94,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // New settings sync commands
   let exportDisposable = vscode.commands.registerCommand(
-    "cursor.exportSettings",
+    "gitSync.exportSettings",
     async () => {
       try {
         if (githubAPI.isConfigured()) {
@@ -102,14 +102,14 @@ export function activate(context: vscode.ExtensionContext) {
           const success = await githubAPI.uploadSettings(settings);
           if (success) {
             vscode.window.showInformationMessage(
-              "Cursor settings exported to GitHub Gist successfully"
+              "Settings exported to GitHub Gist successfully"
             );
           }
         } else {
           // Fallback to local export
           await exportCursorSettings();
           vscode.window.showInformationMessage(
-            "Cursor settings exported locally. Run 'Cursor: Setup GitHub Sync' for cloud sync."
+            "Settings exported locally. Run 'Git Sync: Setup GitHub Sync' for cloud sync."
           );
         }
       } catch (error) {
@@ -119,7 +119,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   let importDisposable = vscode.commands.registerCommand(
-    "cursor.importSettings",
+    "gitSync.importSettings",
     async () => {
       try {
         if (githubAPI.isConfigured()) {
@@ -127,14 +127,14 @@ export function activate(context: vscode.ExtensionContext) {
           if (settings) {
             await applyCursorSettings(settings);
             vscode.window.showInformationMessage(
-              "Cursor settings imported from GitHub Gist successfully"
+              "Settings imported from GitHub Gist successfully"
             );
           }
         } else {
           // Fallback to local import
           await importCursorSettings();
           vscode.window.showInformationMessage(
-            "Cursor settings imported locally. Run 'Cursor: Setup GitHub Sync' for cloud sync."
+            "Settings imported locally. Run 'Git Sync: Setup GitHub Sync' for cloud sync."
           );
         }
       } catch (error) {
@@ -144,7 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   let syncDisposable = vscode.commands.registerCommand(
-    "cursor.syncSettings",
+    "gitSync.syncSettings",
     async () => {
       try {
         if (githubAPI.isConfigured()) {
@@ -159,7 +159,7 @@ export function activate(context: vscode.ExtensionContext) {
               await applyCursorSettings(downloadedSettings);
             }
             vscode.window.showInformationMessage(
-              "Cursor settings synced with GitHub Gist successfully"
+              "Settings synced with GitHub Gist successfully"
             );
           }
         } else {
@@ -167,7 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
           await exportCursorSettings();
           await importCursorSettings();
           vscode.window.showInformationMessage(
-            "Cursor settings synced locally. Run 'Cursor: Setup GitHub Sync' for cloud sync."
+            "Settings synced locally. Run 'Git Sync: Setup GitHub Sync' for cloud sync."
           );
         }
       } catch (error) {

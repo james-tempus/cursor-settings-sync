@@ -1,10 +1,10 @@
-# Cursor Settings Sync Extension
+# Git Sync Extension
 
-A VSCode extension for Cursor that enables seamless synchronization of settings, keybindings, and extensions across multiple workspaces and machines.
+A VSCode extension that enables seamless synchronization of settings, keybindings, and extensions across multiple workspaces and machines using GitHub.
 
 ## Features
 
-- 🔄 **Cloud Sync** - Synchronize Cursor settings across multiple machines via GitHub Gists
+- 🔄 **Cloud Sync** - Synchronize settings across multiple machines via GitHub Gists
 - ⌨️ **Keybinding Sync** - Keep your custom keybindings consistent across all devices
 - 🔌 **Extension Management** - Automatically install/update extensions
 - 💾 **Export/Import** - Manual backup and restore functionality
@@ -21,7 +21,7 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 2. **Install the extension**:
    ```bash
-   cursor --install-extension cursor-settings-sync-1.0.0.vsix
+   cursor --install-extension git-sync-1.0.0.vsix
    ```
 
 3. **Restart Cursor** to activate the extension
@@ -30,7 +30,7 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/cursor-settings-sync.git
+   git clone https://github.com/james-tempus/cursor-settings-sync.git
    cd cursor-settings-sync
    ```
 
@@ -52,7 +52,7 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 5. **Install the packaged extension**:
    ```bash
-   cursor --install-extension cursor-settings-sync-1.0.0.vsix
+   cursor --install-extension git-sync-1.0.0.vsix
    ```
 
 ## Usage
@@ -61,7 +61,7 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 1. **Install the extension** using one of the methods above
 2. **Open Cursor** - You'll see a notification about GitHub setup
-3. **Run Setup Command**: Press `Cmd+Shift+P` and type "Cursor: Setup GitHub Sync"
+3. **Run Setup Command**: Press `Cmd+Shift+P` and type "Git Sync: Setup GitHub Sync"
 4. **Enter GitHub Token**: You'll need a GitHub Personal Access Token
    - Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
    - Click "Generate new token (classic)"
@@ -74,12 +74,12 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 Open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type:
 
-- `Cursor: Setup GitHub Sync` - Configure GitHub authentication and gist selection
-- `Cursor: Export Settings` - Export current settings to GitHub Gist or local file
-- `Cursor: Import Settings` - Import settings from GitHub Gist or local file
-- `Cursor: Sync Settings` - Export and import settings (cloud sync)
-- `Cursor: Wrap with Ignore` - Wrap selected text with ignore comments
-- `Cursor: Wrap with Focus` - Wrap selected text with focus comments
+- `Git Sync: Setup GitHub Sync` - Configure GitHub authentication and gist selection
+- `Git Sync: Export Settings` - Export current settings to GitHub Gist or local file
+- `Git Sync: Import Settings` - Import settings from GitHub Gist or local file
+- `Git Sync: Sync Settings` - Export and import settings (cloud sync)
+- `Git Sync: Wrap with Ignore` - Wrap selected text with ignore comments
+- `Git Sync: Wrap with Focus` - Wrap selected text with focus comments
 
 ### Keyboard Shortcuts
 
@@ -95,13 +95,13 @@ Open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type:
 
 ```typescript
 // Export settings
-await vscode.commands.executeCommand("cursor.exportSettings");
+await vscode.commands.executeCommand("gitSync.exportSettings");
 
 // Import settings
-await vscode.commands.executeCommand("cursor.importSettings");
+await vscode.commands.executeCommand("gitSync.importSettings");
 
 // Sync settings
-await vscode.commands.executeCommand("cursor.syncSettings");
+await vscode.commands.executeCommand("gitSync.syncSettings");
 ```
 
 ## Configuration
@@ -124,7 +124,7 @@ Settings are stored in `~/.cursor-global/cursor-settings.json` with the followin
   "keybindings": [
     {
       "key": "ctrl+alt+i",
-      "command": "cursor.wrapWithIgnore"
+      "command": "gitSync.wrapWithIgnore"
     }
   ],
   "extensions": ["extension.id1", "extension.id2"],
@@ -173,7 +173,7 @@ Settings are stored in `~/.cursor-global/cursor-settings.json` with the followin
 
 1. **Clone and install**:
    ```bash
-   git clone https://github.com/yourusername/cursor-settings-sync.git
+   git clone https://github.com/james-tempus/cursor-settings-sync.git
    cd cursor-settings-sync
    npm install
    ```
@@ -214,7 +214,7 @@ npm run lint
 
 1. **Restart Cursor** completely
 2. **Reload window**: `Cmd+Shift+P` → "Developer: Reload Window"
-3. **Check installation**: `cursor --list-extensions | grep cursor-settings-sync`
+3. **Check installation**: `cursor --list-extensions | grep git-sync`
 
 ### Commands Not Working
 

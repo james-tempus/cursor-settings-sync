@@ -1,7 +1,7 @@
 {
-  "name": "cursor-settings-sync",
-  "displayName": "Cursor Settings Sync",
-  "description": "Sync Cursor settings, keybindings, and extensions across workspaces",
+  "name": "git-sync",
+  "displayName": "Git Sync",
+  "description": "Sync settings, keybindings, and extensions across workspaces using GitHub",
   "version": "1.0.0",
   "publisher": "cursor-sync",
   "repository": {
@@ -15,67 +15,67 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:cursor.wrapWithIgnore",
-    "onCommand:cursor.wrapWithFocus",
-    "onCommand:cursor.setupGitHubSync",
-    "onCommand:cursor.exportSettings",
-    "onCommand:cursor.importSettings",
-    "onCommand:cursor.syncSettings"
+    "onCommand:gitSync.wrapWithIgnore",
+    "onCommand:gitSync.wrapWithFocus",
+    "onCommand:gitSync.setupGitHubSync",
+    "onCommand:gitSync.exportSettings",
+    "onCommand:gitSync.importSettings",
+    "onCommand:gitSync.syncSettings"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "cursor.wrapWithIgnore",
-        "title": "Cursor: Wrap with Ignore"
+        "command": "gitSync.wrapWithIgnore",
+        "title": "Git Sync: Wrap with Ignore"
       },
       {
-        "command": "cursor.wrapWithFocus",
-        "title": "Cursor: Wrap with Focus"
+        "command": "gitSync.wrapWithFocus",
+        "title": "Git Sync: Wrap with Focus"
       },
       {
-        "command": "cursor.setupGitHubSync",
-        "title": "Cursor: Setup GitHub Sync",
-        "category": "Cursor"
+        "command": "gitSync.setupGitHubSync",
+        "title": "Git Sync: Setup GitHub Sync",
+        "category": "Git Sync"
       },
       {
-        "command": "cursor.exportSettings",
-        "title": "Cursor: Export Settings"
+        "command": "gitSync.exportSettings",
+        "title": "Git Sync: Export Settings"
       },
       {
-        "command": "cursor.importSettings",
-        "title": "Cursor: Import Settings"
+        "command": "gitSync.importSettings",
+        "title": "Git Sync: Import Settings"
       },
       {
-        "command": "cursor.syncSettings",
-        "title": "Cursor: Sync Settings"
+        "command": "gitSync.syncSettings",
+        "title": "Git Sync: Sync Settings"
       }
     ],
     "keybindings": [
       {
-        "command": "cursor.wrapWithIgnore",
+        "command": "gitSync.wrapWithIgnore",
         "key": "ctrl+alt+i",
         "mac": "cmd+alt+i",
         "when": "editorTextFocus"
       },
       {
-        "command": "cursor.wrapWithFocus",
+        "command": "gitSync.wrapWithFocus",
         "key": "ctrl+alt+f",
         "mac": "cmd+alt+f",
         "when": "editorTextFocus"
       },
       {
-        "command": "cursor.exportSettings",
+        "command": "gitSync.exportSettings",
         "key": "ctrl+alt+e",
         "mac": "cmd+alt+e"
       },
       {
-        "command": "cursor.importSettings",
+        "command": "gitSync.importSettings",
         "key": "ctrl+alt+m",
         "mac": "cmd+alt+m"
       },
       {
-        "command": "cursor.syncSettings",
+        "command": "gitSync.syncSettings",
         "key": "ctrl+alt+s",
         "mac": "cmd+alt+s"
       }
