@@ -27,28 +27,33 @@
     "commands": [
       {
         "command": "gitSync.wrapWithIgnore",
-        "title": "Git Sync: Wrap with Ignore"
+        "title": "Wrap with Ignore",
+        "category": "Git Sync"
       },
       {
         "command": "gitSync.wrapWithFocus",
-        "title": "Git Sync: Wrap with Focus"
+        "title": "Wrap with Focus",
+        "category": "Git Sync"
       },
       {
         "command": "gitSync.setupGitHubSync",
-        "title": "Git Sync: Setup GitHub Sync",
+        "title": "Setup GitHub Sync",
         "category": "Git Sync"
       },
       {
         "command": "gitSync.exportSettings",
-        "title": "Git Sync: Export Settings"
+        "title": "Export Settings",
+        "category": "Git Sync"
       },
       {
         "command": "gitSync.importSettings",
-        "title": "Git Sync: Import Settings"
+        "title": "Import Settings",
+        "category": "Git Sync"
       },
       {
         "command": "gitSync.syncSettings",
-        "title": "Git Sync: Sync Settings"
+        "title": "Sync Settings",
+        "category": "Git Sync"
       }
     ],
     "keybindings": [
@@ -79,7 +84,22 @@
         "key": "ctrl+alt+s",
         "mac": "cmd+alt+s"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Git Sync",
+      "properties": {
+        "gitSync.extensionRemoval.alwaysAllow": {
+          "type": "boolean",
+          "default": false,
+          "description": "Always allow extension removal without confirmation"
+        },
+        "gitSync.extensionRemoval.neverRemove": {
+          "type": "boolean",
+          "default": false,
+          "description": "Never remove extensions during sync"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

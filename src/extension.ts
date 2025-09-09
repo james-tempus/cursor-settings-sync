@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
   githubAPI.loadConfig().then(isConfigured => {
     if (!isConfigured) {
       vscode.window.showInformationMessage(
-        'Git Sync: GitHub not configured. Run "Git Sync: Setup GitHub Sync" to get started.',
+        'Git Sync: GitHub not configured. Run "Setup GitHub Sync" to get started.',
         'Setup Now'
       ).then(selection => {
         if (selection === 'Setup Now') {
@@ -109,7 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
           // Fallback to local export
           await exportCursorSettings();
           vscode.window.showInformationMessage(
-            "Settings exported locally. Run 'Git Sync: Setup GitHub Sync' for cloud sync."
+            "Settings exported locally. Run 'Setup GitHub Sync' for cloud sync."
           );
         }
       } catch (error) {
@@ -134,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
           // Fallback to local import
           await importCursorSettings();
           vscode.window.showInformationMessage(
-            "Settings imported locally. Run 'Git Sync: Setup GitHub Sync' for cloud sync."
+            "Settings imported locally. Run 'Setup GitHub Sync' for cloud sync."
           );
         }
       } catch (error) {
@@ -167,7 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
           await exportCursorSettings();
           await importCursorSettings();
           vscode.window.showInformationMessage(
-            "Settings synced locally. Run 'Git Sync: Setup GitHub Sync' for cloud sync."
+            "Settings synced locally. Run 'Setup GitHub Sync' for cloud sync."
           );
         }
       } catch (error) {
@@ -188,7 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function getCursorSettings(): Promise<CursorSettings> {
   return {
-    settings: vscode.workspace.getConfiguration("cursor"),
+    settings: vscode.workspace.getConfiguration(),
     keybindings: await getKeybindings(),
     extensions: await getInstalledExtensions(),
     workspaceState: await getWorkspaceState(),
@@ -196,10 +196,35 @@ async function getCursorSettings(): Promise<CursorSettings> {
 }
 
 async function applyCursorSettings(settings: CursorSettings): Promise<void> {
-  // Apply settings
-  await vscode.workspace
-    .getConfiguration("cursor")
-    .update("", settings.settings, true);
+  // Apply settings - only update valid configuration keys
+  const config = vscode.workspace.getConfiguration();
+  
+  // List of valid configuration sections we can update
+  const validConfigSections = [
+    'workbench', 'editor', 'files', 'search', 'terminal', 'git', 
+    'typescript', 'javascript', 'html', 'css', 'scss', 'less',
+    'json', 'markdown', 'python', 'java', 'csharp', 'cpp', 'go',
+    'rust', 'php', 'ruby', 'swift', 'kotlin', 'dart', 'powershell',
+    'shell', 'docker', 'yaml', 'xml', 'sql', 'graphql', 'vue',
+    'react', 'angular', 'svelte', 'solid', 'prettier', 'eslint',
+    'bracketPairColorizer', 'indentRainbow', 'colorHighlight',
+    'todoHighlight', 'bookmarks', 'pathIntellisense', 'autoRenameTag',
+    'bracketPairColorizer2', 'indentRainbow', 'colorize', 'highlight',
+    'trailingSpaces', 'whitespace', 'trimTrailingWhitespace'
+  ];
+  
+  for (const [key, value] of Object.entries(settings.settings)) {
+    try {
+      // Only try to update if it's a valid configuration section
+      if (validConfigSections.some(section => key.startsWith(section + '.'))) {
+        await config.update(key, value, true);
+      }
+    } catch (error) {
+      // Skip invalid configuration keys
+      console.log(`Skipping invalid configuration key: ${key}`);
+    }
+  }
+  
   await setKeybindings(settings.keybindings);
   await installExtensions(settings.extensions);
   await setWorkspaceState(settings.workspaceState);
@@ -214,7 +239,7 @@ async function exportCursorSettings(): Promise<void> {
   }
 
   const settings: CursorSettings = {
-    settings: vscode.workspace.getConfiguration("cursor"),
+    settings: vscode.workspace.getConfiguration(),
     keybindings: await getKeybindings(),
     extensions: await getInstalledExtensions(),
     workspaceState: await getWorkspaceState(),
@@ -238,10 +263,34 @@ async function importCursorSettings(): Promise<void> {
     fs.readFileSync(settingsPath, "utf8")
   );
 
-  // Apply settings
-  await vscode.workspace
-    .getConfiguration("cursor")
-    .update("", settings.settings, true);
+  // Apply settings - only update valid configuration keys
+  const config = vscode.workspace.getConfiguration();
+  
+  // List of valid configuration sections we can update
+  const validConfigSections = [
+    'workbench', 'editor', 'files', 'search', 'terminal', 'git', 
+    'typescript', 'javascript', 'html', 'css', 'scss', 'less',
+    'json', 'markdown', 'python', 'java', 'csharp', 'cpp', 'go',
+    'rust', 'php', 'ruby', 'swift', 'kotlin', 'dart', 'powershell',
+    'shell', 'docker', 'yaml', 'xml', 'sql', 'graphql', 'vue',
+    'react', 'angular', 'svelte', 'solid', 'prettier', 'eslint',
+    'bracketPairColorizer', 'indentRainbow', 'colorHighlight',
+    'todoHighlight', 'bookmarks', 'pathIntellisense', 'autoRenameTag',
+    'bracketPairColorizer2', 'indentRainbow', 'colorize', 'highlight',
+    'trailingSpaces', 'whitespace', 'trimTrailingWhitespace'
+  ];
+  
+  for (const [key, value] of Object.entries(settings.settings)) {
+    try {
+      // Only try to update if it's a valid configuration section
+      if (validConfigSections.some(section => key.startsWith(section + '.'))) {
+        await config.update(key, value, true);
+      }
+    } catch (error) {
+      // Skip invalid configuration keys
+      console.log(`Skipping invalid configuration key: ${key}`);
+    }
+  }
   await setKeybindings(settings.keybindings);
   await installExtensions(settings.extensions);
   await setWorkspaceState(settings.workspaceState);
@@ -267,6 +316,13 @@ async function setKeybindings(keybindings: any): Promise<void> {
     "User",
     "keybindings.json"
   );
+  
+  // Ensure the directory exists
+  const keybindingsDir = path.dirname(keybindingsPath);
+  if (!fs.existsSync(keybindingsDir)) {
+    fs.mkdirSync(keybindingsDir, { recursive: true });
+  }
+  
   fs.writeFileSync(keybindingsPath, JSON.stringify(keybindings, null, 2));
 }
 
@@ -276,16 +332,133 @@ async function getInstalledExtensions(): Promise<string[]> {
     .map((ext) => ext.id);
 }
 
-async function installExtensions(extensions: string[]): Promise<void> {
-  for (const ext of extensions) {
+// Extension removal preferences
+interface ExtensionRemovalPreferences {
+  alwaysAllow: boolean;
+  neverRemove: boolean;
+}
+
+async function getExtensionRemovalPreferences(): Promise<ExtensionRemovalPreferences> {
+  const context = vscode.workspace.getConfiguration('gitSync');
+  return {
+    alwaysAllow: context.get('extensionRemoval.alwaysAllow', false),
+    neverRemove: context.get('extensionRemoval.neverRemove', false)
+  };
+}
+
+async function setExtensionRemovalPreferences(prefs: ExtensionRemovalPreferences): Promise<void> {
+  const config = vscode.workspace.getConfiguration('gitSync');
+  await config.update('extensionRemoval.alwaysAllow', prefs.alwaysAllow, true);
+  await config.update('extensionRemoval.neverRemove', prefs.neverRemove, true);
+}
+
+async function confirmExtensionRemoval(extensionsToRemove: string[]): Promise<boolean> {
+  const prefs = await getExtensionRemovalPreferences();
+  
+  // If user chose "Never Remove", don't remove any extensions
+  if (prefs.neverRemove) {
+    vscode.window.showInformationMessage(
+      'Extension removal is disabled. No extensions will be removed.'
+    );
+    return false;
+  }
+  
+  // If user chose "Always Allow", proceed without confirmation
+  if (prefs.alwaysAllow) {
+    return true;
+  }
+  
+  // Show confirmation dialog with extension list
+  const extensionList = extensionsToRemove.map((ext, index) => 
+    `${index + 1}. ${ext}`
+  ).join('\n');
+  
+  const message = `The following ${extensionsToRemove.length} extensions will be removed:\n\n${extensionList}\n\nDo you want to proceed?`;
+  
+  const choice = await vscode.window.showWarningMessage(
+    message,
+    {
+      modal: true,
+      detail: 'You can change this behavior in Git Sync settings.'
+    },
+    'Remove Extensions',
+    'Always Allow',
+    'Never Remove',
+    'Skip This Time'
+  );
+  
+  switch (choice) {
+    case 'Remove Extensions':
+      return true;
+    case 'Always Allow':
+      await setExtensionRemovalPreferences({ ...prefs, alwaysAllow: true });
+      vscode.window.showInformationMessage(
+        'Extension removal is now set to "Always Allow". You can change this in settings.'
+      );
+      return true;
+    case 'Never Remove':
+      await setExtensionRemovalPreferences({ ...prefs, neverRemove: true });
+      vscode.window.showInformationMessage(
+        'Extension removal is now disabled. You can change this in settings.'
+      );
+      return false;
+    case 'Skip This Time':
+    default:
+      return false;
+  }
+}
+
+async function installExtensions(targetExtensions: string[]): Promise<void> {
+  const currentExtensions = vscode.extensions.all
+    .filter((ext) => !ext.packageJSON.isBuiltin)
+    .map((ext) => ext.id);
+
+  // Find extensions to install (in target but not current)
+  const extensionsToInstall = targetExtensions.filter(
+    (ext) => !currentExtensions.includes(ext)
+  );
+
+  // Find extensions to remove (in current but not target)
+  const extensionsToRemove = currentExtensions.filter(
+    (ext) => !targetExtensions.includes(ext)
+  );
+
+  // Install new extensions
+  for (const ext of extensionsToInstall) {
     try {
       await vscode.commands.executeCommand(
         "workbench.extensions.installExtension",
         ext
       );
+      console.log(`Installed extension: ${ext}`);
     } catch (error) {
       console.error(`Failed to install extension ${ext}:`, error);
     }
+  }
+
+  // Remove old extensions (with confirmation)
+  if (extensionsToRemove.length > 0) {
+    const shouldRemove = await confirmExtensionRemoval(extensionsToRemove);
+    
+    if (shouldRemove) {
+      for (const ext of extensionsToRemove) {
+        try {
+          await vscode.commands.executeCommand(
+            "workbench.extensions.uninstallExtension",
+            ext
+          );
+          console.log(`Removed extension: ${ext}`);
+        } catch (error) {
+          console.error(`Failed to remove extension ${ext}:`, error);
+        }
+      }
+    }
+  }
+
+  if (extensionsToInstall.length > 0 || (extensionsToRemove.length > 0 && await getExtensionRemovalPreferences().then(p => !p.neverRemove))) {
+    vscode.window.showInformationMessage(
+      `Extensions updated: ${extensionsToInstall.length} installed, ${extensionsToRemove.length} removed`
+    );
   }
 }
 

@@ -16,9 +16,6 @@ export interface GitHubConfig {
   gistDescription: string;
 }
 
-// OAuth configuration - using GitHub Device Flow
-const OAUTH_CLIENT_ID = 'Ov23liJ8Z8X9Q2K3m4N7'; // GitHub OAuth App ID
-const OAUTH_SCOPE = 'gist';
 
 export class GitHubAPI {
   private client: AxiosInstance;
@@ -36,65 +33,38 @@ export class GitHubAPI {
 
   async authenticate(): Promise<boolean> {
     try {
-      // Use GitHub Device Flow for OAuth
-      const deviceResponse = await axios.post('https://github.com/login/device/code', {
-        client_id: OAUTH_CLIENT_ID,
-        scope: OAUTH_SCOPE
-      }, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+      // Show authentication options
+      const authMethod = await vscode.window.showQuickPick([
+        {
+          label: '$(key) Use Personal Access Token',
+          description: 'Enter your GitHub Personal Access Token',
+          detail: 'Recommended: Create a token with gist permissions'
+        },
+        {
+          label: '$(browser) Open GitHub to Create Token',
+          description: 'Open GitHub in browser to create a new token',
+          detail: 'Go to Settings > Developer settings > Personal access tokens'
         }
+      ], {
+        placeHolder: 'Choose how to authenticate with GitHub',
+        ignoreFocusOut: true
       });
 
-      const { device_code, user_code, verification_uri, interval } = deviceResponse.data;
-      
-      // Show progress message with device code
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: "GitHub Authentication",
-        cancellable: true
-      }, async (progress, token) => {
-        // Show the device code to user
-        const openBrowser = await vscode.window.showInformationMessage(
-          `GitHub Authentication Required\n\n1. Go to: ${verification_uri}\n2. Enter code: ${user_code}\n3. Click "Authorize"`,
-          'Open Browser',
-          'Cancel'
-        );
-
-        if (openBrowser === 'Open Browser') {
-          await vscode.env.openExternal(vscode.Uri.parse(verification_uri));
-        } else {
-          return false;
-        }
-
-        // Poll for access token
-        progress.report({ message: "Waiting for authorization..." });
-        
-        const accessToken = await this.pollForAccessToken(device_code, interval, token);
-        
-        if (accessToken) {
-          progress.report({ message: "Verifying access token..." });
-          
-          // Test the token
-          this.client.defaults.headers.common['Authorization'] = `token ${accessToken}`;
-          const response = await this.client.get('/user');
-          
-          if (response.status === 200) {
-            this.config = { token: accessToken, gistId: '', gistDescription: '' };
-            await this.saveConfig();
-            
-            vscode.window.showInformationMessage(
-              `Successfully authenticated as ${response.data.login}`
-            );
-            return true;
-          }
-        }
-        
+      if (!authMethod) {
         return false;
-      });
-      
-      return true;
+      }
+
+      if (authMethod.label.includes('Open GitHub')) {
+        // Open GitHub token creation page
+        await vscode.env.openExternal(vscode.Uri.parse('https://github.com/settings/tokens/new?scopes=gist&description=Git%20Sync%20Extension'));
+        
+        // Wait a moment then prompt for token
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return await this.authenticateWithToken();
+      } else {
+        // Use token method
+        return await this.authenticateWithToken();
+      }
     } catch (error) {
       vscode.window.showErrorMessage(
         'Failed to authenticate with GitHub. Please try again.'
@@ -103,56 +73,70 @@ export class GitHubAPI {
     }
   }
 
-  private async pollForAccessToken(deviceCode: string, interval: number, cancellationToken: vscode.CancellationToken): Promise<string | null> {
-    const maxAttempts = 60; // 5 minutes max (60 * 5 seconds)
-    let attempts = 0;
+  private async authenticateWithToken(): Promise<boolean> {
+    try {
+      // Show instructions first
+      const instructions = await vscode.window.showInformationMessage(
+        'To use Git Sync, you need a GitHub Personal Access Token with gist permissions.\n\n' +
+        '1. Go to GitHub Settings > Developer settings > Personal access tokens\n' +
+        '2. Click "Generate new token (classic)"\n' +
+        '3. Select "gist" scope\n' +
+        '4. Copy the token and paste it below',
+        'I have a token',
+        'Open GitHub Settings',
+        'Cancel'
+      );
 
-    while (attempts < maxAttempts && !cancellationToken.isCancellationRequested) {
-      try {
-        const response = await axios.post('https://github.com/login/oauth/access_token', {
-          client_id: OAUTH_CLIENT_ID,
-          device_code: deviceCode,
-          grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
-        }, {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.data.access_token) {
-          return response.data.access_token;
-        }
-
-        if (response.data.error === 'authorization_pending') {
-          // Wait for the specified interval before trying again
-          await new Promise(resolve => setTimeout(resolve, interval * 1000));
-          attempts++;
-        } else if (response.data.error === 'expired_token') {
-          vscode.window.showErrorMessage('Authentication code expired. Please try again.');
-          return null;
-        } else if (response.data.error === 'access_denied') {
-          vscode.window.showErrorMessage('Authentication was denied. Please try again.');
-          return null;
-        } else {
-          vscode.window.showErrorMessage(`Authentication error: ${response.data.error_description || response.data.error}`);
-          return null;
-        }
-      } catch (error) {
-        console.error('Error polling for access token:', error);
-        await new Promise(resolve => setTimeout(resolve, interval * 1000));
-        attempts++;
+      if (instructions === 'Open GitHub Settings') {
+        await vscode.env.openExternal(vscode.Uri.parse('https://github.com/settings/tokens/new?scopes=gist&description=Git%20Sync%20Extension'));
+        return false;
       }
-    }
 
-    if (cancellationToken.isCancellationRequested) {
-      vscode.window.showInformationMessage('Authentication cancelled.');
-    } else {
-      vscode.window.showErrorMessage('Authentication timed out. Please try again.');
-    }
+      if (instructions !== 'I have a token') {
+        return false;
+      }
 
-    return null;
+      // Prompt for GitHub token
+      const token = await vscode.window.showInputBox({
+        prompt: 'Enter your GitHub Personal Access Token',
+        placeHolder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+        password: true,
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+          if (!value || !value.startsWith('ghp_')) {
+            return 'Please enter a valid GitHub Personal Access Token (starts with ghp_)';
+          }
+          return null;
+        }
+      });
+
+      if (!token) {
+        return false;
+      }
+
+      // Test the token
+      this.client.defaults.headers.common['Authorization'] = `token ${token}`;
+      const response = await this.client.get('/user');
+      
+      if (response.status === 200) {
+        this.config = { token, gistId: '', gistDescription: '' };
+        await this.saveConfig();
+        
+        vscode.window.showInformationMessage(
+          `Successfully authenticated as ${response.data.login}`
+        );
+        return true;
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        'Failed to authenticate with GitHub. Please check your token.'
+      );
+      return false;
+    }
+    
+    return false;
   }
+
 
   async selectOrCreateGist(): Promise<boolean> {
     if (!this.config) {
