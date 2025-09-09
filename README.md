@@ -187,7 +187,17 @@ Settings are stored in `~/.cursor-global/cursor-settings.json` with the followin
 
 ### Building
 
+**Quick Build (Recommended):**
 ```bash
+# Build and package extension (automatically cleans up build artifacts)
+./build.sh
+```
+
+**Manual Build:**
+```bash
+# Install dependencies
+npm install
+
 # Compile TypeScript
 npm run compile
 
@@ -195,7 +205,10 @@ npm run compile
 npm run watch
 
 # Package extension
-vsce package
+npx vsce package
+
+# Clean up build artifacts
+rm -rf out/ node_modules/
 ```
 
 ### Testing

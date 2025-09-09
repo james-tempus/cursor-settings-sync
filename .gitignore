@@ -9,6 +9,9 @@ out/
 dist/
 *.vsix
 
+# Temporary build directory
+/tmp/git-sync-build/
+
 # Compiled JavaScript files (generated from TypeScript)
 *.js
 *.js.map

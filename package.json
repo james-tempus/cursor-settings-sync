@@ -103,11 +103,14 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "npm run clean && tsc -p ./ --outDir /tmp/git-sync-build/out",
+    "clean": "rm -rf /tmp/git-sync-build && mkdir -p /tmp/git-sync-build",
+    "watch": "tsc -watch -p ./ --outDir /tmp/git-sync-build/out",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node /tmp/git-sync-build/out/test/runTest.js",
+    "package": "npm run compile && npx vsce package --out /tmp/git-sync-build/",
+    "package-local": "npm run compile && npx vsce package --out ./"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0",
