@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
+import { GitHubAPI } from "./github-api";
 
 interface CursorSettings {
   settings: any;
@@ -10,7 +11,26 @@ interface CursorSettings {
   workspaceState: any;
 }
 
+let githubAPI: GitHubAPI;
+
 export function activate(context: vscode.ExtensionContext) {
+  // Initialize GitHub API
+  githubAPI = new GitHubAPI();
+
+  // Check if GitHub is configured on startup
+  githubAPI.loadConfig().then(isConfigured => {
+    if (!isConfigured) {
+      vscode.window.showInformationMessage(
+        'Cursor Settings Sync: GitHub not configured. Run "Cursor: Setup GitHub Sync" to get started.',
+        'Setup Now'
+      ).then(selection => {
+        if (selection === 'Setup Now') {
+          vscode.commands.executeCommand('cursor.setupGitHubSync');
+        }
+      });
+    }
+  });
+
   // Original ignore/focus commands
   let ignoreDisposable = vscode.commands.registerCommand(
     "cursor.wrapWithIgnore",
@@ -48,15 +68,50 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // GitHub setup command
+  let setupDisposable = vscode.commands.registerCommand(
+    "cursor.setupGitHubSync",
+    async () => {
+      try {
+        const authenticated = await githubAPI.authenticate();
+        if (authenticated) {
+          const gistSelected = await githubAPI.selectOrCreateGist();
+          if (gistSelected) {
+            vscode.window.showInformationMessage(
+              "GitHub sync setup completed successfully!"
+            );
+          } else {
+            vscode.window.showWarningMessage(
+              "GitHub sync setup cancelled"
+            );
+          }
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to setup GitHub sync: ${error}`);
+      }
+    }
+  );
+
   // New settings sync commands
   let exportDisposable = vscode.commands.registerCommand(
     "cursor.exportSettings",
     async () => {
       try {
-        await exportCursorSettings();
-        vscode.window.showInformationMessage(
-          "Cursor settings exported successfully"
-        );
+        if (githubAPI.isConfigured()) {
+          const settings = await getCursorSettings();
+          const success = await githubAPI.uploadSettings(settings);
+          if (success) {
+            vscode.window.showInformationMessage(
+              "Cursor settings exported to GitHub Gist successfully"
+            );
+          }
+        } else {
+          // Fallback to local export
+          await exportCursorSettings();
+          vscode.window.showInformationMessage(
+            "Cursor settings exported locally. Run 'Cursor: Setup GitHub Sync' for cloud sync."
+          );
+        }
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to export settings: ${error}`);
       }
@@ -67,10 +122,21 @@ export function activate(context: vscode.ExtensionContext) {
     "cursor.importSettings",
     async () => {
       try {
-        await importCursorSettings();
-        vscode.window.showInformationMessage(
-          "Cursor settings imported successfully"
-        );
+        if (githubAPI.isConfigured()) {
+          const settings = await githubAPI.downloadSettings();
+          if (settings) {
+            await applyCursorSettings(settings);
+            vscode.window.showInformationMessage(
+              "Cursor settings imported from GitHub Gist successfully"
+            );
+          }
+        } else {
+          // Fallback to local import
+          await importCursorSettings();
+          vscode.window.showInformationMessage(
+            "Cursor settings imported locally. Run 'Cursor: Setup GitHub Sync' for cloud sync."
+          );
+        }
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to import settings: ${error}`);
       }
@@ -81,11 +147,29 @@ export function activate(context: vscode.ExtensionContext) {
     "cursor.syncSettings",
     async () => {
       try {
-        await exportCursorSettings();
-        await importCursorSettings();
-        vscode.window.showInformationMessage(
-          "Cursor settings synced successfully"
-        );
+        if (githubAPI.isConfigured()) {
+          // Export to GitHub
+          const settings = await getCursorSettings();
+          const uploadSuccess = await githubAPI.uploadSettings(settings);
+          
+          if (uploadSuccess) {
+            // Import from GitHub (to get latest changes)
+            const downloadedSettings = await githubAPI.downloadSettings();
+            if (downloadedSettings) {
+              await applyCursorSettings(downloadedSettings);
+            }
+            vscode.window.showInformationMessage(
+              "Cursor settings synced with GitHub Gist successfully"
+            );
+          }
+        } else {
+          // Fallback to local sync
+          await exportCursorSettings();
+          await importCursorSettings();
+          vscode.window.showInformationMessage(
+            "Cursor settings synced locally. Run 'Cursor: Setup GitHub Sync' for cloud sync."
+          );
+        }
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to sync settings: ${error}`);
       }
@@ -95,10 +179,30 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     ignoreDisposable,
     focusDisposable,
+    setupDisposable,
     exportDisposable,
     importDisposable,
     syncDisposable
   );
+}
+
+async function getCursorSettings(): Promise<CursorSettings> {
+  return {
+    settings: vscode.workspace.getConfiguration("cursor"),
+    keybindings: await getKeybindings(),
+    extensions: await getInstalledExtensions(),
+    workspaceState: await getWorkspaceState(),
+  };
+}
+
+async function applyCursorSettings(settings: CursorSettings): Promise<void> {
+  // Apply settings
+  await vscode.workspace
+    .getConfiguration("cursor")
+    .update("", settings.settings, true);
+  await setKeybindings(settings.keybindings);
+  await installExtensions(settings.extensions);
+  await setWorkspaceState(settings.workspaceState);
 }
 
 async function exportCursorSettings(): Promise<void> {

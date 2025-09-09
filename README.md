@@ -4,12 +4,14 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 ## Features
 
-- 🔄 **Sync Settings** - Synchronize Cursor settings across multiple installations
-- ⌨️ **Keybinding Sync** - Keep your custom keybindings consistent
+- 🔄 **Cloud Sync** - Synchronize Cursor settings across multiple machines via GitHub Gists
+- ⌨️ **Keybinding Sync** - Keep your custom keybindings consistent across all devices
 - 🔌 **Extension Management** - Automatically install/update extensions
 - 💾 **Export/Import** - Manual backup and restore functionality
 - 🎯 **Workspace State** - Preserve workspace-specific configurations
 - 🚀 **Real-time Sync** - Automatic synchronization capabilities
+- 🔐 **GitHub Integration** - Secure cloud storage using GitHub Gists
+- ⚡ **First-time Setup** - Guided setup workflow for GitHub authentication
 
 ## Installation
 
@@ -55,13 +57,27 @@ A VSCode extension for Cursor that enables seamless synchronization of settings,
 
 ## Usage
 
+### First-time Setup
+
+1. **Install the extension** using one of the methods above
+2. **Open Cursor** - You'll see a notification about GitHub setup
+3. **Run Setup Command**: Press `Cmd+Shift+P` and type "Cursor: Setup GitHub Sync"
+4. **Enter GitHub Token**: You'll need a GitHub Personal Access Token
+   - Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+   - Click "Generate new token (classic)"
+   - Select scopes: `gist` (Create gists)
+   - Copy the token (starts with `ghp_`)
+5. **Select or Create Gist**: Choose an existing gist or create a new one
+6. **Start Syncing**: Your settings will now sync across all your Cursor installations!
+
 ### Command Palette
 
 Open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type:
 
-- `Cursor: Export Settings` - Export current settings to file
-- `Cursor: Import Settings` - Import settings from file
-- `Cursor: Sync Settings` - Export and import settings
+- `Cursor: Setup GitHub Sync` - Configure GitHub authentication and gist selection
+- `Cursor: Export Settings` - Export current settings to GitHub Gist or local file
+- `Cursor: Import Settings` - Import settings from GitHub Gist or local file
+- `Cursor: Sync Settings` - Export and import settings (cloud sync)
 - `Cursor: Wrap with Ignore` - Wrap selected text with ignore comments
 - `Cursor: Wrap with Focus` - Wrap selected text with focus comments
 
