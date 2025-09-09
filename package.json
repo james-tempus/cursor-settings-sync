@@ -3,6 +3,11 @@
   "displayName": "Cursor Settings Sync",
   "description": "Sync Cursor settings, keybindings, and extensions across workspaces",
   "version": "1.0.0",
+  "publisher": "cursor-sync",
+  "repository": {
+    "type": "git",
+    "url": "https://gist.github.com/973441179e4f58014e19ef29dfca5816.git"
+  },
   "engines": {
     "vscode": "^1.60.0"
   },
