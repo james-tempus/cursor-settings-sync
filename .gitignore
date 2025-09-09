@@ -9,6 +9,12 @@ out/
 dist/
 *.vsix
 
+# Compiled JavaScript files (generated from TypeScript)
+*.js
+*.js.map
+!src/**/*.js
+!src/**/*.js.map
+
 # IDE files
 .vscode/
 .idea/
